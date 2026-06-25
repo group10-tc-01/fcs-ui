@@ -1,0 +1,59 @@
+@using Fcs.UI.Application.Common
+@using Fcs.UI.Application.Interfaces
+@inject ITokenStorage TokenStorage
+@inject IUserContext UserCtx
+@inject NavigationManager Navigation
+
+@if (_isChecking)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+}
+else if (_isAuthenticated && (string.IsNullOrEmpty(Roles) || _hasRole))
+{
+    @ChildContent
+}
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? Roles { get; set; }
+
+    private bool _isChecking = true;
+    private bool _isAuthenticated;
+    private bool _hasRole = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await UserCtx.InitializeAsync();
+            var token = await TokenStorage.GetAccessTokenAsync();
+            if (!string.IsNullOrEmpty(token) && IsExpired(token!))
+            {
+                await TokenStorage.ClearTokensAsync();
+                token = null;
+            }
+            _isAuthenticated = !string.IsNullOrEmpty(token);
+
+            if (_isAuthenticated && !string.IsNullOrEmpty(Roles))
+            {
+                var roles = Roles.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                _hasRole = roles.Any(r => UserCtx.IsInRole(r));
+            }
+        }
+        catch
+        {
+            _isAuthenticated = false;
+        }
+        finally
+        {
+            _isChecking = false;
+        }
+
+        if (!_isAuthenticated || (!string.IsNullOrEmpty(Roles) && !_hasRole))
+        {
+            Navigation.NavigateTo("/login", replace: true);
+        }
+    }
+
+    private static bool IsExpired(string token) => JwtHelper.IsExpired(token);
+}

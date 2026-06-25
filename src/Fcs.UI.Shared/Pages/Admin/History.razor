@@ -1,0 +1,97 @@
+@page "/admin/history"
+@using Fcs.UI.Application.ViewModels
+@using Fcs.UI.Application.DTOs
+@inject AdminDonationHistoryViewModel Vm
+@inject NavigationManager Navigation
+
+<AuthGuard Roles="GestorONG">
+    <MudText Typo="Typo.h4" Class="mb-4">Histórico Geral de Doações</MudText>
+
+    <OfflineBanner />
+
+    @if (Vm.IsLoading)
+    {
+        <MudProgressCircular Indeterminate="true" Class="my-8" />
+    }
+    else if (!string.IsNullOrEmpty(Vm.ErrorMessage))
+    {
+        <MudAlert Severity="Severity.Error">@Vm.ErrorMessage</MudAlert>
+    }
+    else if (Vm.Donations.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info" Class="mt-4">
+            Nenhuma doação encontrada.
+        </MudAlert>
+    }
+    else
+    {
+        <MudTextField @bind-Value="_searchString"
+                      Placeholder="Filtrar por campanha, doador, valor, data ou status..."
+                      Variant="Variant.Outlined"
+                      Immediate="true"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Class="mb-4" />
+        <MudTable Items="Vm.Donations" Hover="true" Striped="true"
+                  Filter="new Func<DonationDto, bool>(FilterDonation)">
+            <HeaderContent>
+                <MudTh><MudTableSortLabel SortBy="new Func<DonationDto, object?>(x => x.CampaignTitle ?? x.CampaignId.ToString())">Campanha</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<DonationDto, object?>(x => x.DonorId)">Doador</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<DonationDto, object?>(x => x.Amount)">Valor</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel InitialDirection="SortDirection.Descending" SortBy="new Func<DonationDto, object?>(x => x.CreatedAt)">Data</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<DonationDto, object?>(x => x.Status)">Status</MudTableSortLabel></MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@(context.CampaignTitle ?? context.CampaignId.ToString()[..8] + "...")</MudTd>
+                <MudTd>@FormatDonorId(context.DonorId)</MudTd>
+                <MudTd>@FormatMoney(context.Amount)</MudTd>
+                <MudTd>@context.CreatedAt.ToString("dd/MM/yyyy HH:mm")</MudTd>
+                <MudTd>
+                    <MudChip T="string" Size="Size.Small" Color="@StatusColor(context.Status)">@context.Status</MudChip>
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                @if (!string.IsNullOrWhiteSpace(_searchString))
+                {
+                    <MudText>Nenhuma doação corresponde ao filtro "@_searchString".</MudText>
+                }
+            </NoRecordsContent>
+        </MudTable>
+    }
+</AuthGuard>
+
+@code {
+    private string? _searchString;
+
+    private bool FilterDonation(DonationDto d)
+    {
+        if (string.IsNullOrWhiteSpace(_searchString))
+            return true;
+
+        var search = _searchString.Trim();
+        return d.CampaignTitle?.Contains(search, StringComparison.OrdinalIgnoreCase) == true
+            || d.DonorId.ToString().Contains(search, StringComparison.OrdinalIgnoreCase)
+            || d.Status.Contains(search, StringComparison.OrdinalIgnoreCase)
+            || d.Amount.ToString(System.Globalization.CultureInfo.InvariantCulture).Contains(search)
+            || d.CreatedAt.ToString("dd/MM/yyyy HH:mm").Contains(search);
+    }
+
+    private static string FormatDonorId(Guid id)
+        => id.ToString()[..8] + "...";
+
+    private static string FormatMoney(decimal value)
+        => value.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"));
+
+    private static Color StatusColor(string status) => status switch
+    {
+        "Confirmed" or "Completed" => Color.Success,
+        "Failed" => Color.Error,
+        "Pending" => Color.Warning,
+        _ => Color.Default
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Vm.LoadCommand.ExecuteAsync(null);
+    }
+}

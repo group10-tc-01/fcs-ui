@@ -1,0 +1,12 @@
+**/.git
+**/.vs
+**/bin
+**/obj
+**/.idea
+**/.vscode
+**/node_modules
+**/TestResults
+**/BenchmarkDotNet.Artifacts
+**/coverage*
+**/*.user
+**/*.suo

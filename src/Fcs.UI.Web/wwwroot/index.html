@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Conexão Solidária</title>
+    <base href="/" />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
+    <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
+</head>
+<body>
+    <div id="app">
+        <div class="loading-container">
+            <p>Carregando...</p>
+        </div>
+    </div>
+
+    <div id="blazor-error-ui" class="blazor-error-ui">
+        Ocorreu um erro. <a href="">Recarregar</a>
+    </div>
+
+    <script>
+        window.syncAutofill = function () {
+            document.querySelectorAll('input').forEach(function (el) {
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+            });
+        };
+    </script>
+    <script src="_framework/blazor.webassembly.js"></script>
+    <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+</body>
+</html>

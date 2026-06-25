@@ -1,0 +1,119 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+@using Fcs.UI.Application.Common
+@using Fcs.UI.Application.Interfaces
+@inject ITokenStorage TokenStorage
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+
+<MudThemeProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+<MudPopoverProvider />
+<MudLayout>
+    @if (_showAppBar)
+    {
+    <MudAppBar Elevation="1">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" OnClick="@((e) => DrawerToggle())" />
+        <MudText Typo="Typo.h6" Class="ml-2">Conexão Solidária</MudText>
+        <MudSpacer />
+        @if (_isAuthenticated)
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.Logout" Color="Color.Inherit"
+                           Title="Sair" OnClick="@LogoutAsync" />
+        }
+    </MudAppBar>
+    }
+    @if (_showDrawer)
+    {
+        <MudDrawer @bind-Open="_drawerOpen" Variant="DrawerVariant.Responsive" ClipMode="DrawerClipMode.Always">
+            <MudNavMenu>
+                <MudNavLink Href="/" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
+                <MudNavLink Href="/dashboard" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
+                @if (_isAuthenticated)
+                {
+                    <MudDivider />
+                    <MudText Typo="Typo.subtitle2" Class="px-4 py-2">Minha Conta</MudText>
+                    @if (!_isAdmin)
+                    {
+                        <MudNavLink Href="/campaigns" Icon="@Icons.Material.Filled.VolunteerActivism">Doar</MudNavLink>
+                        <MudNavLink Href="/history" Icon="@Icons.Material.Filled.History">Histórico</MudNavLink>
+                    }
+                    <MudNavLink Href="/profile" Icon="@Icons.Material.Filled.Person">Perfil</MudNavLink>
+                }
+                @if (_isAdmin)
+                {
+                    <MudDivider />
+                    <MudText Typo="Typo.subtitle2" Class="px-4 py-2">Administração</MudText>
+                    <MudNavLink Href="/admin/campaigns" Icon="@Icons.Material.Filled.ManageAccounts">Campanhas</MudNavLink>
+                    <MudNavLink Href="/admin/history" Icon="@Icons.Material.Filled.History">Histórico</MudNavLink>
+                }
+            </MudNavMenu>
+        </MudDrawer>
+    }
+    <MudMainContent>
+        <OfflineBanner />
+        <MudContainer Class="py-4">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private bool _drawerOpen = true;
+    private bool _showDrawer = true;
+    private bool _showAppBar = true;
+    private bool _isAuthenticated;
+    private bool _isAdmin;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Navigation.LocationChanged += OnLocationChanged;
+        await RefreshAuthAsync();
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        InvokeAsync(RefreshAuthAsync);
+    }
+
+    private async Task RefreshAuthAsync()
+    {
+        try
+        {
+            var relativePath = new Uri(Navigation.Uri).AbsolutePath;
+            _showAppBar = relativePath != "/login" && relativePath != "/";
+            _showDrawer = _showAppBar;
+
+            var token = await TokenStorage.GetAccessTokenAsync();
+            _isAuthenticated = !string.IsNullOrEmpty(token) && !IsExpired(token!);
+            _isAdmin = _isAuthenticated && HasRole(token!, "GestorONG");
+            StateHasChanged();
+        }
+        catch
+        {
+            _isAuthenticated = false;
+            _isAdmin = false;
+        }
+    }
+
+    private static bool IsExpired(string token) => JwtHelper.IsExpired(token);
+
+    private static bool HasRole(string token, string role) => JwtHelper.HasRole(token, role);
+
+    private void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+
+    private async Task LogoutAsync()
+    {
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("/", replace: true);
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
+}

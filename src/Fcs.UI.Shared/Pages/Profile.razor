@@ -1,0 +1,51 @@
+@page "/profile"
+@using Fcs.UI.Application.ViewModels
+@inject ProfileViewModel Vm
+
+<AuthGuard>
+    <MudText Typo="Typo.h4" Class="mb-4">Meu Perfil</MudText>
+
+    @if (Vm.IsLoading)
+    {
+        <MudProgressCircular Indeterminate="true" Class="my-8" />
+    }
+    else
+    {
+        <MudCard Elevation="2" Class="pa-6">
+            <MudCardContent>
+                <div class="d-flex flex-column align-center mb-6">
+                    <MudAvatar Size="Size.Large" Class="mb-4" Color="Color.Primary">
+                        @Vm.FullName?.Substring(0, 1)?.ToUpper()
+                    </MudAvatar>
+                    <MudText Typo="Typo.h5">@Vm.FullName</MudText>
+                </div>
+
+                <MudGrid>
+                    <MudItem xs="12" sm="6">
+                        <MudText Typo="Typo.body2" Class="text-secondary">E-mail</MudText>
+                        <MudText Typo="Typo.body1" Class="mb-3">@Vm.Email</MudText>
+
+                        <MudText Typo="Typo.body2" Class="text-secondary">ID do usuário</MudText>
+                        <MudText Typo="Typo.body1" Class="mb-3" Style="font-size: 0.8rem;">@Vm.UserId</MudText>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudText Typo="Typo.body2" Class="text-secondary">Funções</MudText>
+                        <div class="d-flex flex-wrap gap-1 mt-1">
+                            @foreach (var role in Vm.Roles)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Primary">@role</MudChip>
+                            }
+                        </div>
+                    </MudItem>
+                </MudGrid>
+            </MudCardContent>
+        </MudCard>
+    }
+</AuthGuard>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await Vm.LoadCommand.ExecuteAsync(null);
+    }
+}

@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Fcs.UI.Application/Fcs.UI.Application.csproj" />
+    <Project Path="src/Fcs.UI.Domain/Fcs.UI.Domain.csproj" />
+    <Project Path="src/Fcs.UI.Infrastructure/Fcs.UI.Infrastructure.csproj" />
+    <Project Path="src/Fcs.UI.Cache/Fcs.UI.Cache.csproj" />
+    <Project Path="src/Fcs.UI.Shared/Fcs.UI.Shared.csproj" />
+    <Project Path="src/Fcs.UI.Maui/Fcs.UI.Maui.csproj" />
+    <Project Path="src/Fcs.UI.Web/Fcs.UI.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Fcs.UI.Benchmarks/Fcs.UI.Benchmarks.csproj" />
+    <Project Path="tests/Fcs.UI.IntegrationTests/Fcs.UI.IntegrationTests.csproj" />
+    <Project Path="tests/Fcs.UI.UnitTests/Fcs.UI.UnitTests.csproj" />
+  </Folder>
+</Solution>

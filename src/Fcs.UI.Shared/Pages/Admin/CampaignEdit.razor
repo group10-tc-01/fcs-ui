@@ -1,0 +1,51 @@
+@page "/admin/campaigns/new"
+@page "/admin/campaigns/{Id:guid}/edit"
+@using Fcs.UI.Application.ViewModels
+@inject AdminCampaignEditViewModel Vm
+@inject NavigationManager Navigation
+
+<AuthGuard Roles="GestorONG">
+    <MudText Typo="Typo.h4" Class="mb-4">@Vm.TitleText</MudText>
+
+    @if (Vm.IsLoading)
+    {
+        <MudProgressCircular Indeterminate="true" Class="my-8" />
+    }
+    else
+    {
+        <MudPaper Class="pa-6" Elevation="2" MaxWidth="500">
+            <MudTextField @bind-Value="Vm.Title" Label="Título" Disabled="@Vm.IsSubmitting" />
+            <MudTextField @bind-Value="Vm.Description" Label="Descrição" Lines="4" Disabled="@Vm.IsSubmitting" />
+            <MudDatePicker Date="@Vm.StartDate" DateChanged="EventCallback.Factory.Create<DateTime?>(this, d => { if (d.HasValue) Vm.StartDate = d.Value; })" Label="Data de Início" Disabled="@Vm.IsSubmitting" />
+            <MudDatePicker Date="@Vm.EndDate" DateChanged="EventCallback.Factory.Create<DateTime?>(this, d => { if (d.HasValue) Vm.EndDate = d.Value; })" Label="Data de Término" Disabled="@Vm.IsSubmitting" />
+            <MudNumericField @bind-Value="Vm.FinancialGoal" Label="Meta Financeira (R$)" Disabled="@Vm.IsSubmitting" />
+
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Class="mt-4"
+                       Disabled="@Vm.IsSubmitting"
+                       OnClick="async () => await Vm.SaveCommand.ExecuteAsync(null)">
+                @(Vm.IsSubmitting ? "Salvando..." : "Salvar")
+            </MudButton>
+
+            <MudButton Variant="Variant.Text" FullWidth="true" Class="mt-2"
+                       Disabled="@Vm.IsSubmitting"
+                       OnClick="@(() => Navigation.NavigateTo("/admin/campaigns"))">
+                Cancelar
+            </MudButton>
+
+            @if (!string.IsNullOrEmpty(Vm.ErrorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4">@Vm.ErrorMessage</MudAlert>
+            }
+        </MudPaper>
+    }
+</AuthGuard>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id != Guid.Empty)
+            await Vm.LoadCommand.ExecuteAsync(Id);
+    }
+}

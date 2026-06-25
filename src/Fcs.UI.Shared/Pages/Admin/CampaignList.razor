@@ -1,0 +1,107 @@
+@page "/admin/campaigns"
+@using Fcs.UI.Application.ViewModels
+@using Fcs.UI.Application.DTOs
+@inject AdminCampaignListViewModel Vm
+@inject NavigationManager Navigation
+
+<AuthGuard Roles="GestorONG">
+    <MudText Typo="Typo.h4" Class="mb-4">Gerenciar Campanhas</MudText>
+
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mb-4"
+               OnClick="@(() => Navigation.NavigateTo("/admin/campaigns/new"))">
+        Nova Campanha
+    </MudButton>
+
+    @if (Vm.IsLoading)
+    {
+        <MudProgressCircular Indeterminate="true" Class="my-8" />
+    }
+    else if (!string.IsNullOrEmpty(Vm.ErrorMessage))
+    {
+        <MudAlert Severity="Severity.Error">@Vm.ErrorMessage</MudAlert>
+    }
+    else if (Vm.Campaigns.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info">Nenhuma campanha cadastrada.</MudAlert>
+    }
+    else
+    {
+        <MudTextField @bind-Value="_searchString"
+                      Placeholder="Filtrar por título, meta, status..."
+                      Variant="Variant.Outlined"
+                      Immediate="true"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Class="mb-4" />
+        <MudTable Items="Vm.Campaigns" Hover="true" Striped="true"
+                  Filter="new Func<CampaignDto, bool>(FilterCampaign)">
+            <HeaderContent>
+                <MudTh><MudTableSortLabel SortBy="new Func<CampaignDto, object?>(x => x.Title)">Título</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<CampaignDto, object?>(x => x.FinancialGoal)">Meta</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<CampaignDto, object?>(x => x.TotalAmountRaised)">Arrecadado</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<CampaignDto, object?>(x => x.Status)">Status</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<CampaignDto, object?>(x => x.StartDate)">Início</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<CampaignDto, object?>(x => x.EndDate)">Término</MudTableSortLabel></MudTh>
+                <MudTh>Ações</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.Title</MudTd>
+                <MudTd>@FormatMoney(context.FinancialGoal)</MudTd>
+                <MudTd>@FormatMoney(context.TotalAmountRaised)</MudTd>
+                <MudTd>
+                    <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">@context.Status</MudChip>
+                </MudTd>
+                <MudTd>@context.StartDate.ToShortDateString()</MudTd>
+                <MudTd>@context.EndDate.ToShortDateString()</MudTd>
+                <MudTd>
+                    @if (context.Status == "Active")
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                       OnClick="@(() => Navigation.NavigateTo($"/admin/campaigns/{context.Id}/edit"))" />
+                        <MudIconButton Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Color="Color.Success"
+                                       OnClick="@(async () => await Vm.CompleteCommand.ExecuteAsync(context.Id))" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Cancel" Size="Size.Small" Color="Color.Error"
+                                       OnClick="@(async () => await Vm.CancelCommand.ExecuteAsync(context.Id))" />
+                    }
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                @if (!string.IsNullOrWhiteSpace(_searchString))
+                {
+                    <MudText>Nenhuma campanha corresponde ao filtro "@_searchString".</MudText>
+                }
+            </NoRecordsContent>
+        </MudTable>
+    }
+</AuthGuard>
+
+@code {
+    private string? _searchString;
+
+    private bool FilterCampaign(CampaignDto c)
+    {
+        if (string.IsNullOrWhiteSpace(_searchString))
+            return true;
+
+        var search = _searchString.Trim();
+        return c.Title.Contains(search, StringComparison.OrdinalIgnoreCase)
+            || c.Status.Contains(search, StringComparison.OrdinalIgnoreCase)
+            || c.FinancialGoal.ToString(System.Globalization.CultureInfo.InvariantCulture).Contains(search);
+    }
+
+    private static string FormatMoney(decimal value)
+        => value.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"));
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Active" => Color.Success,
+        "Completed" => Color.Info,
+        "Canceled" => Color.Error,
+        _ => Color.Default
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Vm.LoadCommand.ExecuteAsync(null);
+    }
+}

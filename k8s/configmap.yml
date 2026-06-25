@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fcs-ui-config
+  labels:
+    app: fcs-ui
+data:
+  appsettings.Production.json: |
+    {
+      "Api": {
+        "Identity": "https://identity.conexaosolidaria.com",
+        "Campaign": "https://campaign.conexaosolidaria.com",
+        "Donations": "https://donations.conexaosolidaria.com"
+      }
+    }

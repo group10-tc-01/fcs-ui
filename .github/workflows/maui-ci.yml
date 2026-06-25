@@ -1,0 +1,174 @@
+name: MAUI CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'Directory.Packages.props'
+      - '*.slnx'
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  NUGET_XMLDOC_MODE: skip
+
+jobs:
+  branch-name:
+    name: Branch policy
+    if: ${{ github.event_name == 'pull_request' }}
+    uses: group10-tc-01/fcs-pipelines/.github/workflows/branch-name-check.yml@main
+
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Gitleaks
+        shell: bash
+        run: |
+          GITLEAKS_VERSION="8.30.1"
+          mkdir -p "$HOME/.local/bin"
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" -o /tmp/gitleaks.tar.gz
+          tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
+          install -m 0755 /tmp/gitleaks "$HOME/.local/bin/gitleaks"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          gitleaks version
+      - name: Scan repository
+        shell: bash
+        run: gitleaks dir . --redact --verbose --no-banner
+
+  dependency-scan:
+    name: Dependency vulnerability scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore
+        run: dotnet restore Fcs.UI.slnx
+      - name: Check vulnerable packages
+        shell: bash
+        run: |
+          dotnet list Fcs.UI.slnx package --vulnerable --include-transitive > vulnerability-report.txt || true
+          cat vulnerability-report.txt
+          if grep -Ei '\b(high|critical)\b' vulnerability-report.txt; then
+            echo "High or critical vulnerable package found."
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: vulnerability-report
+          path: vulnerability-report.txt
+          if-no-files-found: ignore
+
+  build-and-test:
+    name: Build & test
+    needs: [branch-name, secret-scan, dependency-scan]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Install MAUI workload
+        shell: pwsh
+        run: dotnet workload install maui
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/*.props', '**/*.targets') }}
+          restore-keys: nuget-${{ runner.os }}-
+      - name: Restore
+        run: dotnet restore Fcs.UI.slnx
+      - name: Build
+        run: dotnet build Fcs.UI.slnx --no-restore -p:RunAnalyzers=false
+      - name: Unit tests
+        run: dotnet test tests/Fcs.UI.UnitTests --no-build --logger "trx;LogFileName=unit-tests.trx" --collect:"XPlat Code Coverage" --results-directory TestResults/UnitTests --
+          DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover,cobertura
+      - name: Integration tests
+        run: dotnet test tests/Fcs.UI.IntegrationTests --no-build --logger "trx;LogFileName=integration-tests.trx" --results-directory TestResults/IntegrationTests
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: test-results
+          path: TestResults
+          if-no-files-found: ignore
+
+  build-android:
+    name: Build Android APK
+    needs: build-and-test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Install MAUI Android workload
+        shell: pwsh
+        run: dotnet workload install maui-android
+      - name: Restore
+        run: dotnet restore Fcs.UI.slnx
+      - name: Publish Android
+        run: dotnet publish src/Fcs.UI.Maui -f net10.0-android -c Release --no-restore
+      - uses: actions/upload-artifact@v4
+        with:
+          name: maui-android-apk
+          path: src/Fcs.UI.Maui/bin/Release/net10.0-android/**/*.apk
+
+  build-windows:
+    name: Build Windows MSIX
+    needs: build-and-test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Install MAUI workload
+        shell: pwsh
+        run: dotnet workload install maui
+      - name: Restore
+        run: dotnet restore Fcs.UI.slnx
+      - name: Publish Windows
+        run: dotnet publish src/Fcs.UI.Maui -f net10.0-windows10.0.19041.0 -c Release --no-restore
+      - uses: actions/upload-artifact@v4
+        with:
+          name: maui-windows-msix
+          path: src/Fcs.UI.Maui/bin/Release/net10.0-windows10.0.19041.0/**/*.msix
+
+  build-ios:
+    name: Build iOS IPA
+    needs: build-and-test
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Install MAUI iOS workload
+        shell: bash
+        run: dotnet workload install maui-ios
+      - name: Restore
+        run: dotnet restore Fcs.UI.slnx
+      - name: Publish iOS
+        run: dotnet publish src/Fcs.UI.Maui -f net10.0-ios -c Release --no-restore
+      - uses: actions/upload-artifact@v4
+        with:
+          name: maui-ios-ipa
+          path: src/Fcs.UI.Maui/bin/Release/net10.0-ios/**/*.ipa

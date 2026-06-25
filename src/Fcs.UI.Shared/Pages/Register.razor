@@ -1,0 +1,52 @@
+@page "/register"
+@using System.ComponentModel
+@using Fcs.UI.Application.ViewModels
+@implements IDisposable
+@inject RegisterViewModel Vm
+@inject NavigationManager Navigation
+
+<MudContainer MaxWidth="MaxWidth.ExtraSmall">
+    <MudPaper Class="pa-8 mt-16" Elevation="2">
+        <MudText Typo="Typo.h5" Align="Align.Center" Class="mb-6">Criar Conta</MudText>
+
+        <MudTextField @bind-Value="Vm.FullName" Label="Nome completo" For="() => Vm.FullName" Disabled="@Vm.IsLoading" />
+        <MudTextField @bind-Value="Vm.Cpf" Label="CPF (apenas números, 11 dígitos)" For="() => Vm.Cpf" Disabled="@Vm.IsLoading" />
+        <MudTextField @bind-Value="Vm.Email" Label="E-mail" For="() => Vm.Email" Disabled="@Vm.IsLoading" />
+        <MudTextField @bind-Value="Vm.Password" Label="Senha" InputType="InputType.Password" For="() => Vm.Password" Disabled="@Vm.IsLoading" />
+        <MudTextField @bind-Value="Vm.ConfirmPassword" Label="Confirmar senha" InputType="InputType.Password" For="() => Vm.ConfirmPassword" Disabled="@Vm.IsLoading" />
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Class="mt-4"
+                   Disabled="@Vm.IsLoading" OnClick="async () => await Vm.RegisterCommand.ExecuteAsync(null)">
+            @(Vm.IsLoading ? "Registrando..." : "Registrar")
+        </MudButton>
+
+        @if (!string.IsNullOrEmpty(Vm.ErrorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Class="mt-4">@Vm.ErrorMessage</MudAlert>
+        }
+
+        <MudText Align="Align.Center" Class="mt-6">
+            <MudLink Href="/login" Typo="Typo.body2">Já tenho conta — Entrar</MudLink>
+        </MudText>
+
+        <MudText Align="Align.Center" Class="mt-2">
+            <MudLink Href="/" Typo="Typo.body2">Voltar para Home</MudLink>
+        </MudText>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private PropertyChangedEventHandler? _handler;
+
+    protected override void OnInitialized()
+    {
+        _handler = (_, _) => InvokeAsync(StateHasChanged);
+        Vm.PropertyChanged += _handler;
+    }
+
+    public void Dispose()
+    {
+        if (_handler is not null)
+            Vm.PropertyChanged -= _handler;
+    }
+}

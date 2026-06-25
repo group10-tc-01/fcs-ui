@@ -1,0 +1,127 @@
+@page "/campaigns"
+@using Fcs.UI.Application.DTOs
+@using Fcs.UI.Application.ViewModels
+@inject CampaignSelectionViewModel Vm
+@inject NavigationManager Navigation
+
+<AuthGuard>
+    <MudGrid Class="mb-4">
+
+        <!-- Título à esquerda -->
+        <MudItem xs="12" sm="12">
+            <MudText Typo="Typo.h3" Class="fw-bold">
+                Selecione uma campanha
+            </MudText>
+        </MudItem>
+
+        <MudItem xs="12" sm="12" Class="d-flex justify-start">
+            <MudSelect T="string"
+                       @bind-Value="Vm.SelectedSort"
+                       Variant="Variant.Outlined"
+                       Label="Ordenar por"
+                       Dense="true"
+                       Style="width: 150px; font-size: 0.85rem;">
+                <MudSelectItem Value="@("progress")">Progresso (padrão)</MudSelectItem>
+                <MudSelectItem Value="@("name-asc")">Nome (A-Z)</MudSelectItem>
+                <MudSelectItem Value="@("name-desc")">Nome (Z-A)</MudSelectItem>
+                <MudSelectItem Value="@("goal-asc")">Meta (menor p/ maior)</MudSelectItem>
+                <MudSelectItem Value="@("goal-desc")">Meta (maior p/ menor)</MudSelectItem>
+                <MudSelectItem Value="@("enddate-asc")">Término (próximo)</MudSelectItem>
+                <MudSelectItem Value="@("enddate-desc")">Término (distante)</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+
+    </MudGrid>
+
+    <OfflineBanner />
+
+    @if (Vm.IsLoading)
+    {
+        <MudProgressCircular Indeterminate="true" Class="my-8" />
+    }
+    else if (!string.IsNullOrEmpty(Vm.ErrorMessage))
+    {
+        <MudAlert Severity="Severity.Error">@Vm.ErrorMessage</MudAlert>
+    }
+    else if (Vm.Campaigns.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info">Nenhuma campanha disponível no momento.</MudAlert>
+    }
+    else
+    {
+        <MudGrid>
+            @foreach (var campaign in Vm.Campaigns)
+            {
+                var pct = CalcPercent(campaign);
+
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Elevation="2" Class="mb-4">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.h6">@campaign.Title</MudText>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            <MudText Typo="Typo.body2" Class="mb-2">
+                                Meta: @FormatMoney(campaign.FinancialGoal)
+                            </MudText>
+                            <MudText Typo="Typo.body2" Class="mb-4">
+                                Arrecadado: @FormatMoney(campaign.TotalAmountRaised)
+                            </MudText>
+                            <div class="d-flex justify-center mb-2">
+                                <svg viewBox="0 0 100 100" width="100" height="100">
+                                    <circle cx="50" cy="50" r="40" fill="none" stroke="#e0e0e0" stroke-width="10" />
+                                    <circle cx="50" cy="50" r="40" fill="none"
+                                            stroke="@SvgColor(pct)" stroke-width="10"
+                                            stroke-dasharray="251.33"
+                                            stroke-dashoffset="@SvgOffset(pct)"
+                                            transform="rotate(-90 50 50)"
+                                            stroke-linecap="round" />
+                                    <text x="50" y="50" text-anchor="middle"
+                                          dominant-baseline="central" font-size="16" font-weight="bold"
+                                          fill="@SvgColor(pct)">
+                                        @pct%
+                                    </text>
+                                </svg>
+                            </div>
+                        </MudCardContent>
+                        <MudCardActions>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                       OnClick="@(() => Navigation.NavigateTo($"/donate/{campaign.Id}"))">
+                                Selecionar
+                            </MudButton>
+                        </MudCardActions>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+</AuthGuard>
+
+@code {
+    private static int CalcPercent(ActiveDonorCampaignDto c)
+    {
+        if (c.FinancialGoal <= 0) return 0;
+        return (int)Math.Min(c.TotalAmountRaised / c.FinancialGoal * 100, 100);
+    }
+
+    private static string SvgOffset(int pct)
+        => (251.33 * (1.0 - pct / 100.0)).ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+
+    private static string SvgColor(int pct) => pct switch
+    {
+        0 => "#0288d1",
+        < 50 => "#ff9800",
+        < 100 => "#3f51b5",
+        100 => "#4caf50",
+        _ => "#3f51b5",
+    };
+
+    private static string FormatMoney(decimal value)
+        => value.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"));
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Vm.LoadCommand.ExecuteAsync(null);
+    }
+}

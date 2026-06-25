@@ -1,0 +1,147 @@
+@page "/"
+@using Fcs.UI.Application.Common
+@using Fcs.UI.Application.Interfaces
+@inject ITokenStorage TokenStorage
+@inject NavigationManager Navigation
+
+<MudContainer>
+    <div class="d-flex justify-center mt-8 mb-2">
+        <img src="_content/Fcs.UI.Shared/img/logo_conexao_solidaria.png" alt="Conexão Solidária" style="max-width: min(90vw, 800px); height: auto;" />
+    </div>
+    <MudText Typo="Typo.body1" Align="Align.Center" Class="mb-8 text-secondary">
+        Conectando doadores a campanhas que transformam vidas
+    </MudText>
+    @if (_userName is not null)
+    {
+        <MudText Typo="Typo.h5" Align="Align.Center" Class="mb-4">
+            Bem vindo, @_userName!
+        </MudText>
+    }
+    @if (_isDonor)
+    {
+        <MudGrid>
+            <MudItem xs="12" sm="6">
+                <div @onclick="@(() => Navigation.NavigateTo("/campaigns"))" style="cursor: pointer; height: 100%;">
+                    <MudCard Class="pa-4" Elevation="3">
+                        <MudCardContent Class="d-flex flex-column align-center py-8">
+                            <MudIcon Icon="@Icons.Material.Filled.VolunteerActivism" Size="Size.Large" Color="Color.Primary" />
+                            <MudText Typo="Typo.h5" Align="Align.Center" Class="mt-4">Doar</MudText>
+                            <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-2 text-secondary">
+                                Escolha uma campanha e faça sua doação
+                            </MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </div>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <div @onclick="@(() => Navigation.NavigateTo("/history"))" style="cursor: pointer; height: 100%;">
+                    <MudCard Class="pa-4" Elevation="3">
+                        <MudCardContent Class="d-flex flex-column align-center py-8">
+                            <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Large" Color="Color.Tertiary" />
+                            <MudText Typo="Typo.h5" Align="Align.Center" Class="mt-4">Histórico</MudText>
+                            <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-2 text-secondary">
+                                Acompanhe suas doações realizadas
+                            </MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </div>
+            </MudItem>
+        </MudGrid>
+    }
+    else if (_isAdmin)
+    {
+        <MudGrid>
+            <MudItem xs="12" sm="6">
+                <div @onclick="@(() => Navigation.NavigateTo("/admin/campaigns"))" style="cursor: pointer; height: 100%;">
+                    <MudCard Class="pa-4" Elevation="3">
+                        <MudCardContent Class="d-flex flex-column align-center py-8">
+                            <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" Size="Size.Large" Color="Color.Primary" />
+                            <MudText Typo="Typo.h5" Align="Align.Center" Class="mt-4">Gerenciar Campanhas</MudText>
+                            <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-2 text-secondary">
+                                Crie, edite e acompanhe as campanhas
+                            </MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </div>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <div @onclick="@(() => Navigation.NavigateTo("/dashboard"))" style="cursor: pointer; height: 100%;">
+                    <MudCard Class="pa-4" Elevation="3">
+                        <MudCardContent Class="d-flex flex-column align-center py-8">
+                            <MudIcon Icon="@Icons.Material.Filled.Dashboard" Size="Size.Large" Color="Color.Tertiary" />
+                            <MudText Typo="Typo.h5" Align="Align.Center" Class="mt-4">Dashboard</MudText>
+                            <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-2 text-secondary">
+                                Acompanhe o progresso de todas as campanhas
+                            </MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </div>
+            </MudItem>
+        </MudGrid>
+    }
+    else
+    {
+        <MudGrid>
+            <MudItem xs="12" sm="6">
+                <div @onclick="@(() => Navigation.NavigateTo("/login"))" style="cursor: pointer; height: 100%;">
+                    <MudCard Class="pa-4" Elevation="3">
+                        <MudCardContent Class="d-flex flex-column align-center py-8">
+                            <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Large" Color="Color.Primary" />
+                            <MudText Typo="Typo.h5" Align="Align.Center" Class="mt-4">Acessar</MudText>
+                            <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-2 text-secondary">
+                                Faça login para doar, acompanhar seu histórico e gerenciar sua conta
+                            </MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </div>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <div @onclick="@(() => Navigation.NavigateTo("/dashboard"))" style="cursor: pointer; height: 100%;">
+                    <MudCard Class="pa-4" Elevation="3">
+                        <MudCardContent Class="d-flex flex-column align-center py-8">
+                            <MudIcon Icon="@Icons.Material.Filled.VolunteerActivism" Size="Size.Large" Color="Color.Tertiary" />
+                            <MudText Typo="Typo.h5" Align="Align.Center" Class="mt-4">Campanhas</MudText>
+                            <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-2 text-secondary">
+                                Veja as campanhas disponíveis e faça a diferença
+                            </MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </div>
+            </MudItem>
+        </MudGrid>
+    }
+</MudContainer>
+
+@code {
+    private bool _isDonor;
+    private bool _isAdmin;
+    private string? _userName;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var token = await TokenStorage.GetAccessTokenAsync();
+            if (!string.IsNullOrEmpty(token) && !IsExpired(token))
+            {
+                _isAdmin = HasRole(token, "GestorONG");
+                _isDonor = !_isAdmin;
+                _userName = GetName(token);
+            }
+        }
+        catch { }
+    }
+
+    private static string? GetName(string token)
+    {
+        var payload = JwtHelper.DecodePayload(token);
+        if (payload is null) return null;
+        if (payload.Value.TryGetProperty("name", out var name) && name.ValueKind == System.Text.Json.JsonValueKind.String)
+            return name.GetString();
+        return null;
+    }
+
+    private static bool IsExpired(string token) => JwtHelper.IsExpired(token);
+
+    private static bool HasRole(string token, string role) => JwtHelper.HasRole(token, role);
+}

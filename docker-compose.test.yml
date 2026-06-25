@@ -1,0 +1,62 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: fcs-ui-test-sqlserver
+    environment:
+      SA_PASSWORD: "Your_password123"
+      ACCEPT_EULA: "Y"
+    ports:
+      - "1433:1433"
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "Your_password123" -C -Q "SELECT 1"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: fcs-ui-test-kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      CLUSTER_ID: "fcs-ui-test-cluster"
+
+  wiremock-identity:
+    image: wiremock/wiremock:latest
+    container_name: fcs-ui-test-wiremock-identity
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./tests/__mocks__/identity:/home/wiremock
+    command: ["--global-response-templating", "--verbose"]
+
+  wiremock-donations:
+    image: wiremock/wiremock:latest
+    container_name: fcs-ui-test-wiremock-donations
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./tests/__mocks__/donations:/home/wiremock
+    command: ["--global-response-templating", "--verbose"]
+
+  wiremock-campaign:
+    image: wiremock/wiremock:latest
+    container_name: fcs-ui-test-wiremock-campaign
+    ports:
+      - "8082:8080"
+    volumes:
+      - ./tests/__mocks__/campaign:/home/wiremock
+    command: ["--global-response-templating", "--verbose"]

@@ -1,0 +1,44 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.db
+*.db-shm
+*.db-wal
+*.log
+*.DotSettings
+*.nupkg
+[Pp]ackages/
+TestResults/
+coverage*.json
+coverage*.xml
+coverage*.info
+BenchmarkDotNet.Artifacts/
+
+## Visual Studio
+.vs/
+*.sln.docstates
+
+## JetBrains
+.idea/
+*.sln.iml
+
+## VS Code
+.vscode/
+
+## Build artifacts
+artifacts/
+
+## Docker
+.docker/
+
+## Environment
+.env
+.env.*
+!.env.example
+
+## OS
+.DS_Store
+Thumbs.db

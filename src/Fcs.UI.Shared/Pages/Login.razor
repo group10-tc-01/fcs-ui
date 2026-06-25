@@ -1,0 +1,75 @@
+@page "/login"
+@using System.ComponentModel
+@using Fcs.UI.Application.ViewModels
+@implements IDisposable
+@inject LoginViewModel Vm
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<MudContainer MaxWidth="MaxWidth.ExtraSmall">
+    <MudPaper Class="pa-8 mt-16" Elevation="2">
+        <MudText Typo="Typo.h5" Align="Align.Center" Class="mb-6">Entrar</MudText>
+
+        <MudTextField @bind-Value="Vm.Email"
+                      Label="E-mail"
+                      For="() => Vm.Email"
+                      Required="true"
+                      RequiredError="E-mail é obrigatório"
+                      Immediate="true"
+                      Disabled="@Vm.IsLoading" />
+        <MudTextField @bind-Value="Vm.Password"
+                      Label="Senha"
+                      InputType="InputType.Password"
+                      For="() => Vm.Password"
+                      Required="true"
+                      RequiredError="Senha é obrigatória"
+                      Immediate="true"
+                      Disabled="@Vm.IsLoading" />
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Class="mt-4"
+                   Disabled="@Vm.IsLoading" OnClick="async () => await SubmitLoginAsync()">
+            @(Vm.IsLoading ? "Entrando..." : "Entrar")
+        </MudButton>
+
+        <MudButton Variant="Variant.Text" Color="Color.Secondary" FullWidth="true" Class="mt-2"
+                   Disabled="@Vm.IsLoading" OnClick="NavigateToRegister">
+            Criar conta
+        </MudButton>
+
+        @if (!string.IsNullOrEmpty(Vm.ErrorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Class="mt-4">@Vm.ErrorMessage</MudAlert>
+        }
+
+        <MudText Align="Align.Center" Class="mt-6">
+            <MudLink Href="/" Typo="Typo.body2">Voltar para Home</MudLink>
+        </MudText>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private PropertyChangedEventHandler? _handler;
+
+    protected override void OnInitialized()
+    {
+        _handler = (_, _) => InvokeAsync(StateHasChanged);
+        Vm.PropertyChanged += _handler;
+    }
+
+    public void Dispose()
+    {
+        if (_handler is not null)
+            Vm.PropertyChanged -= _handler;
+    }
+
+    private async Task SubmitLoginAsync()
+    {
+        try { await JS.InvokeVoidAsync("syncAutofill"); } catch { }
+        await Vm.LoginCommand.ExecuteAsync(null);
+    }
+
+    private void NavigateToRegister()
+    {
+        Navigation.NavigateTo("/register");
+    }
+}

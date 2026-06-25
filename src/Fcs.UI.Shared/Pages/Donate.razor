@@ -1,0 +1,72 @@
+@page "/donate/{CampaignId?}"
+@using System.Globalization
+@using Fcs.UI.Application.ViewModels
+@inject DonationViewModel Vm
+@inject NavigationManager Navigation
+
+<AuthGuard>
+    <MudText Typo="Typo.h4" Class="mb-4">Fazer Doação</MudText>
+
+    @if (!string.IsNullOrEmpty(Vm.CampaignTitle))
+    {
+        <MudText Typo="Typo.body2" Class="mb-2">Campanha: @Vm.CampaignTitle</MudText>
+    }
+
+    <OfflineBanner />
+
+    @if (!Vm.IsOnline)
+    {
+        <MudAlert Severity="Severity.Error" Class="mt-4">
+            Esta operação requer conexão com a internet.
+        </MudAlert>
+    }
+
+    @if (Vm.IsSuccess)
+    {
+        <MudAlert Severity="Severity.Success" Class="mt-4 mb-4">@Vm.SuccessMessage</MudAlert>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                   OnClick="@(() => Navigation.NavigateTo("/history"))">
+            Ver meu histórico de doações
+        </MudButton>
+        <MudButton Variant="Variant.Text" Color="Color.Primary" FullWidth="true" Class="mt-2"
+                   OnClick="@(() => Navigation.NavigateTo("/campaigns"))">
+            Doar para outra campanha
+        </MudButton>
+    }
+    else
+    {
+        <MudPaper Class="pa-6 mt-4" Elevation="2">
+            <MudTextField @bind-Value="Vm.DonorCpf" Label="CPF (apenas números)" Disabled="@(!Vm.IsOnline || Vm.IsSubmitting)" />
+            <MudNumericField T="decimal"
+                             @bind-Value="Vm.Amount"
+                             Label="Valor (R$)"
+                             Format="N2"
+                             Culture="@_ptBr"
+                             Step="@_step"
+                             Disabled="@(!Vm.IsOnline || Vm.IsSubmitting)" />
+            <MudButton Variant="Variant.Filled" Color="Color.Secondary" FullWidth="true" Class="mt-4"
+                       Disabled="@(!Vm.IsOnline || Vm.IsSubmitting)"
+                       OnClick="async () => await Vm.SubmitCommand.ExecuteAsync(null)">
+                @(Vm.IsSubmitting ? "Processando..." : "Doar agora")
+            </MudButton>
+
+            @if (!string.IsNullOrEmpty(Vm.ErrorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4">@Vm.ErrorMessage</MudAlert>
+            }
+        </MudPaper>
+    }
+</AuthGuard>
+
+@code {
+    [Parameter] public string? CampaignId { get; set; }
+
+    private static readonly CultureInfo _ptBr = CultureInfo.GetCultureInfo("pt-BR");
+    private static readonly decimal _step = 0.01m;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrEmpty(CampaignId) && Guid.TryParse(CampaignId, out var id))
+            await Vm.InitializeAsync(id);
+    }
+}

@@ -1,0 +1,41 @@
+@using Fcs.UI.Application.Interfaces
+@inject IConnectivityService Connectivity
+
+@if (_visible)
+{
+    <MudAlert Severity="@_alertSeverity" Variant="Variant.Filled" Dense="true" Class="ma-0">
+        @_message
+    </MudAlert>
+}
+
+@code {
+    private bool _visible;
+    private Severity _alertSeverity = Severity.Warning;
+    private string _message = "Você está offline. Dados podem estar desatualizados.";
+
+    protected override void OnInitialized()
+    {
+        Connectivity.ConnectivityChanged += (_, connected) =>
+        {
+            _visible = !connected;
+            _alertSeverity = connected ? Severity.Success : Severity.Warning;
+            _message = connected
+                ? "Conectado novamente."
+                : "Você está offline. Dados podem estar desatualizados.";
+            StateHasChanged();
+
+            if (connected)
+            {
+                _ = HideAfterDelay();
+            }
+        };
+        _visible = !Connectivity.IsConnected;
+    }
+
+    private async Task HideAfterDelay()
+    {
+        await Task.Delay(3000);
+        _visible = false;
+        StateHasChanged();
+    }
+}
